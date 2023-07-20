@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Mahjong Layouts</title>
+    <style>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        display: flex;
+        background: #222;
+      }
+      .container {
+        display: flex;
+        flex-direction: row;
+        align-items: flex-start;
+        justify-content: center;
+        flex: 1;
+        gap: 8px;
+        padding: 8px;
+      }
+      .wrapper {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: flex-start;
+        gap: 8px;
+        border: thin solid grey;
+        padding: 4px;
+        background: #ddd;
+      }
+      .title {
+        font-weight: bold;
+        text-transform: capitalize;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container"></div>
+    <script>
+      const layouts = [
+        "dragon",
+        "monkey",
+        "ox",
+        "ram",
+        "rooster",
+        "shanghai",
+        "snake",
+      ];
+
+      const configStandard = {
+        scale: 2,
+        offsetX: 2,
+        offsetY: 2,
+      };
+
+      const configStacked = {
+        tileWidth: 6,
+        tileHeight: 6,
+        offsetX: 2,
+        offsetY: 2,
+        layerOffset: 2,
+      };
+
+      const configLayers = {
+        tileWidth: 6,
+        tileHeight: 6,
+        offsetX: 2,
+        offsetY: 2,
+        layerOffset: 2,
+      };
+
+      const container = document.querySelector(".container");
+
+      const loadLayout = async (layout) => {
+        const response = await fetch(`./layouts/${layout}.json`);
+        return response.json();
+      };
+
+      const metrics = (data) => ({
+        layerCount: data.length,
+        maxRows: Math.max(...data.map((layer) => layer.length)),
+        maxCols: Math.max(
+          ...data.flatMap((layer) => layer.map((row) => row.length))
+        ),
+      });
+
+      const generateHues = (n) =>
+        Array.from(
+          { length: n },
+          (_, i) => `hsla(${Math.floor((i / n) * 360)}, 100%, 80%, 1.0)`
+        );
+
+      const generateHeights = (n) =>
+        Array.from(
+          { length: n },
+          (_, i) => `hsla(0, 100%, ${Math.floor(((i + 1) / n) * 100)}%, 1.0)`
+        );
+
+      const generateTileColors = (n) =>
+        Array.from(
+          { length: n },
+          (_, i) => `hsla(60, 20%, ${Math.floor(((i + 1) / n) * 100)}%, 1.0)`
+        );
+
+      const renderAllLayers = (ctx, data, config) => {
+        const { tileWidth, tileHeight, offsetX, offsetY, layerOffset } = config;
+        const { layerCount, maxCols, maxRows } = metrics(data);
+        const layerHeight = maxRows * tileHeight;
+        const layerWidth = maxCols * tileWidth;
+        const layerHeightWithOffset = layerHeight + layerOffset;
+
+        ctx.canvas.width = layerWidth + offsetX * 2;
+        ctx.canvas.height =
+          layerHeightWithOffset * layerCount + offsetY * 2 - layerOffset;
+
+        ctx.fillStyle = "#666";
+        ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+
+        for (let layerIndex = 0; layerIndex < data.length; layerIndex++) {
+          const rows = data[layerIndex];
+          const rowOffset = layerIndex * (layerHeight + layerOffset);
+          const layerX = offsetX;
+          const layerY = offsetY + rowOffset;
+
+          ctx.fillStyle = "#222";
+          ctx.fillRect(layerX, layerY, layerWidth, layerHeight);
+
+          ctx.fillStyle = "white";
+          for (let rowIndex = 0; rowIndex < rows.length; rowIndex++) {
+            const cols = rows[rowIndex];
+            for (let colIndex = 0; colIndex < cols.length; colIndex++) {
+              const x = offsetX + colIndex * tileWidth;
+              const y = offsetY + rowIndex * tileHeight + rowOffset;
+              if (cols[colIndex] === 1) {
+                ctx.fillRect(x, y, tileWidth, tileHeight);
+              }
+            }
+          }
+        }
+      };
+
+      const renderStacked = (ctx, data, config) => {
+        const { tileWidth, tileHeight, offsetX, offsetY, layerOffset } = config;
+        const { layerCount, maxCols, maxRows } = metrics(data);
+        const colors = generateHeights(layerCount); // generateHues(layerCount);
+        const layerHeight = maxRows * tileHeight;
+        const layerWidth = maxCols * tileWidth;
+
+        ctx.canvas.width = layerWidth + offsetX * 2;
+        ctx.canvas.height = layerHeight + offsetY * 2;
+
+        ctx.fillStyle = "#044";
+        ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+
+        for (let layerIndex = 0; layerIndex < data.length; layerIndex++) {
+          const rows = data[layerIndex];
+
+          ctx.fillStyle = colors[layerIndex];
+          for (let rowIndex = 0; rowIndex < rows.length; rowIndex++) {
+            const cols = rows[rowIndex];
+            for (let colIndex = 0; colIndex < cols.length; colIndex++) {
+              const x = offsetX + colIndex * tileWidth;
+              const y = offsetY + rowIndex * tileHeight;
+              if (cols[colIndex] === 1) {
+                ctx.fillRect(x, y, tileWidth, tileHeight);
+              }
+            }
+          }
+        }
+      };
+
+      const renderStandard = (ctx, data, config) => {
+        const { layerCount, maxCols, maxRows } = metrics(data);
+        const { scale, offsetX, offsetY } = config;
+        const colors = generateTileColors(layerCount); // generateHues(layerCount)
+
+        const scaleX = scale * 3;
+        const scaleY = scale * 4;
+
+        const tileWidth = scaleX * 2;
+        const tileHeight = scaleY * 2;
+
+        const layerHeight = maxRows * scaleY;
+        const layerWidth = maxCols * scaleX;
+
+        ctx.canvas.width = layerWidth + offsetX * 2;
+        ctx.canvas.height = layerHeight + offsetY * 2;
+
+        ctx.fillStyle = "#AAA";
+        ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+
+        ctx.strokeStyle = "#000";
+        ctx.lineWidth = 1;
+
+        for (let layerIndex = 0; layerIndex < data.length; layerIndex++) {
+          const rows = data[layerIndex];
+
+          ctx.fillStyle = colors[layerIndex];
+          for (let rowIndex = 0; rowIndex < rows.length; rowIndex++) {
+            const cols = rows[rowIndex];
+            for (let colIndex = 0; colIndex < cols.length; colIndex++) {
+              const top = offsetY + rowIndex * scaleY;
+              const left = offsetX + colIndex * scaleX;
+
+              const originX = left + scaleX / 2;
+              const originY = top + scaleY / 2;
+
+              const x = Math.floor(originX - tileWidth / 2) + 0.5;
+              const y = Math.floor(originY - tileHeight / 2) + 0.5;
+
+              if (cols[colIndex] === 1) {
+                ctx.fillRect(x, y, tileWidth, tileHeight);
+                ctx.strokeRect(x, y, tileWidth, tileHeight);
+              }
+            }
+          }
+        }
+      };
+
+      const createContext = (layout, target = document.body) => {
+        const canvas = document.createElement("canvas");
+        canvas.dataset.layout = layout;
+        target.append(canvas);
+        return canvas.getContext("2d");
+      };
+
+      (async () => {
+        for (let layout of layouts) {
+          const data = await loadLayout(layout);
+          const wrapper = document.createElement("div");
+          wrapper.classList.add("wrapper");
+          const title = document.createElement("div");
+          title.classList.add("title");
+          title.textContent = layout;
+          wrapper.append(title);
+          renderStandard(createContext(layout, wrapper), data, configStandard);
+          renderStacked(createContext(layout, wrapper), data, configStacked);
+          renderAllLayers(createContext(layout, wrapper), data, configLayers);
+          container.append(wrapper);
+        }
+      })();
+    </script>
+  </body>
+</html>

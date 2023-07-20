@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta http-equiv="content-type" content="text/html; charset=utf-8" />
+    <title>JavaScript-Mahjong</title>
+    <meta http-equiv="imagetoolbar" content="no" />
+    <meta http-equiv="X-UA-Compatible" content="chrome=1" />
+    <!-- (c) n.landsteiner, mass:werk 2005; https://www.masswerk.at -->
+    <link rel="stylesheet" type="text/css" href="style.css" />
+    <script
+      type="text/javascript"
+      src="mahjong_support/cookiefortunes.js"
+    ></script>
+    <script
+      type="text/javascript"
+      src="mahjong_support/mahjong_beta.js"
+    ></script>
+
+    <script type="text/javascript">
+      document.addEventListener("DOMContentLoaded", () => {
+        writeBoard();
+        mahjongInit();
+      });
+    </script>
+  </head>
+
+  <body>
+    <h1>JavaScript-Mahjong</h1>
+
+    <div class="content"></div>
+
+    <div class="settings">
+      <form name="mahjongsettings" onsubmit="return false">
+        <div class="buttons">
+          <input
+            value="&nbsp; New Game &nbsp;"
+            type="button"
+            onclick="newGame(); if (this.blur) this.blur();"
+            class="gameButton"
+          />
+          &nbsp;
+          <input
+            value="&nbsp; Reshuffle &nbsp;"
+            type="button"
+            onclick="reshuffle(); if (this.blur) this.blur();"
+            class="gameButton"
+          />
+          &nbsp;
+          <input
+            value="&nbsp; Show Hints &nbsp;"
+            type="button"
+            onclick="showPairsLeft(); if (this.blur) this.blur();"
+            class="gameButton"
+          />
+          &nbsp;
+          <input
+            value="&nbsp; Undo Move &nbsp;"
+            type="button"
+            onclick="undoMove(); if (this.blur) this.blur();"
+            class="gameButton"
+          />
+        </div>
+        <div class="inputs">
+          <label class="settingslabel">Layout:</label>
+          <script language="JavaScript" type="text/javascript">
+            writeLayoutSelector();
+          </script>
+          <label class="settingslabel">Tileset:</label>
+          <script language="JavaScript" type="text/javascript">
+            writeTilesetSelector();
+          </script>
+        </div>
+      </form>
+    </div>
+
+    <div class="info">
+      <h3>About Mahjong</h3>
+      <p>
+        &quot;Mahjong&quot; is a traditional Chinese game, the single player
+        variant is also known as &quot;Shanghai&quot;.<br />
+        The game is formed by a stack of 144 Mahjong pieces:
+      </p>
+      <p>
+        There are each 4 pieces of any of the following tiles:<br />
+        &nbsp;&nbsp; the 4 winds (N, S, E, W) and the 3 dragons (C, P, F)<br />
+        &nbsp;&nbsp; the 9 dots or wheels (1&#150;9)<br />
+        &nbsp;&nbsp; the 9 bamboo or sticks (1&#150;9)<br />
+        &nbsp;&nbsp; the 9 cracks or numbers (1&#150;9)<br />
+        as well as each 1 piece of<br />
+        &nbsp;&nbsp; the 4 matching seasons (SPR, SUM, AUT, WIN)<br />
+        &nbsp;&nbsp; and the 4 matching flowers (PLUM, ORCH, MUM, BAM).
+      </p>
+      <p>
+        For more information on the tiles see the
+        <a href="tilesguide.html" target="_blank" class="pagelink"
+          >Guide to Tiles</a
+        >.
+      </p>
+      <p>
+        Solitaire Mahjong is a game of strategy, luck, and memory:<br />Remove
+        all pairs of matching tiles &#150; same face or any of the matching
+        seasons or matching flowers &#150; by selecting and double clicking. (A
+        single click of a selected tile will deselect it.)<br />A tile is
+        accessible only if there is no tile on top of it and if it can slide out
+        to the left, to the right, or both.
+      </p>
+      <p>
+        The game ends if you successfully removed all tiles or if there is no
+        pair of accessible and matching tiles left. So if you weren't alerted
+        for the end of the game, there must be at least one pair of matching
+        tiles left.
+      </p>
+      <h3>Help</h3>
+      <ul>
+        <li>
+          &quot;Show Hints&quot; displays any matching pairs on the board.
+        </li>
+        <li>&quot;Undo Move&quot; lets you back up your last moves.</li>
+        <li>
+          &quot;Reshuffle&quot; redistributes any tiles left in random order.
+        </li>
+      </ul>
+      <p>
+        Please mind that you will not get a fortune cookie if you use any of the
+        helps. (Reshuffling a previously untouched game will not cost you your
+        cookie, since this is essentially the same as starting a new game.)
+      </p>
+      <p>
+        &nbsp;<br />
+        &quot;<b>JavaScript-Mahjong</b>&quot; is entirely written in JavaScript
+        and DHTML and does not use any plugins or other extensions. The script
+        should be compatible to any standard web browser.
+      </p>
+      <p>
+        Special features: Multiple layouts and tilesets, hints, backup of moves,
+        reshuffle, cookie fortunes for winners.
+      </p>
+      <p>
+        &copy; Norbert Landsteiner 2005, all rights reserved<br />
+        mass:werk &#150; media environments<br />
+        &lt;<a href="https://www.masswerk.at/" target="_top" class="pagelink"
+          >https://www.masswerk.at</a
+        >&gt;<br />
+        All rights reserved. No copying or publication without the author's
+        written permission.
+      </p>
+      <p>
+        Version History:<br />2009: Fixed doubleclick for MSIE 7/8.<br />
+        Sept 2009: Added support for
+        <a
+          href="http://code.google.com/chrome/chromeframe/"
+          target="_blank"
+          class="pagelink"
+          >Google Chrome Frame</a
+        >.
+      </p>
+      <p>&nbsp;</p>
+    </div>
+  </body>
+</html>
