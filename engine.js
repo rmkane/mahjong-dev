@@ -256,15 +256,32 @@ class MahjongEngine {
     return this.getTileAtIndex(tileIndex);
   }
 
-  getNeigbors(layerIndex, rowIndex, colIndex) {
+  getPosition(tile) {
+    const { layerCount, maxRows, maxCols } = this.metrics();
+    for (let layerIndex = layerCount - 1; layerIndex >= 0; layerIndex--) {
+      for (let rowIndex = 0; rowIndex < maxRows; rowIndex++) {
+        for (let colIndex = 0; colIndex < maxCols; colIndex++) {
+          const currentTile = this.getTile(layerIndex, rowIndex, colIndex);
+          if (currentTile === tile) {
+            return { layerIndex, rowIndex, colIndex };
+          }
+        }
+      }
+    }
+  }
+
+  getNeighbors(layerIndex, rowIndex, colIndex) {
     const west = this.getTile(layerIndex, rowIndex, colIndex - 2);
     const east = this.getTile(layerIndex, rowIndex, colIndex + 2);
     const south = this.getTile(layerIndex, rowIndex + 2, colIndex);
     const north = this.getTile(layerIndex, rowIndex - 2, colIndex);
 
-    console.log({ west, east, south, north });
+    const nw = this.getTile(layerIndex, rowIndex - 1, colIndex - 2);
+    const ne = this.getTile(layerIndex, rowIndex - 1, colIndex + 2);
+    const sw = this.getTile(layerIndex, rowIndex + 1, colIndex - 2);
+    const se = this.getTile(layerIndex, rowIndex + 1, colIndex + 2);
 
-    return { west, east, south, north };
+    return { west, east, south, north, nw, ne, sw, se };
   }
 
   getSelectedCell() {
@@ -352,14 +369,37 @@ class MahjongCanvasShader {
     const left = x + offsetX;
     const top = y + offsetY;
 
-    ctx.fillStyle = "#422";
-    ctx.fillRect(left, top, width + scale, height + scale);
-
+    // Tile image
     ctx.drawImage(img, left, top, width, height);
 
     ctx.strokeStyle = "#642";
     ctx.lineWidth = 1;
     ctx.strokeRect(left, top, width, height);
+  }
+
+  drawTileBase(data, layerIndex, x, y, width, height, scale) {
+    const ctx = this.getContext();
+
+    const offsetX = layerIndex * -scale;
+    const offsetY = layerIndex * -scale;
+
+    const left = x + offsetX;
+    const top = y + offsetY;
+
+    //ctx.fillStyle = "#422";
+    //ctx.fillRect(left, top, width + scale, height + scale);
+
+    // Right
+    //if (!neighbors.east && !neighbors.ne && !neighbors.se) {
+    ctx.fillStyle = "#884";
+    ctx.fillRect(left + width, top, scale, height + scale);
+    //}
+
+    // Bottom
+    //if (!neighbors.south && !neighbors.sw && !neighbors.se) {
+    ctx.fillStyle = "#442";
+    ctx.fillRect(left, top + height, width + scale, scale);
+    //}
   }
 
   drawHighlight(layerIndex, x, y, width, height, scale) {
@@ -383,8 +423,8 @@ class MahjongCanvasRenderer {
   #engine = null;
   #shader = null;
   #scale = 1.0;
-  #offsetX = 50;
-  #offsetY = 50;
+  #offsetX = 8;
+  #offsetY = 8;
 
   constructor(engine) {
     this.#engine = engine;
@@ -450,6 +490,7 @@ class MahjongCanvasRenderer {
     for (let layerIndex = 0; layerIndex < data.length; layerIndex++) {
       const rows = data[layerIndex];
 
+      // Draw tile bases
       for (let rowIndex = 0; rowIndex < rows.length; rowIndex++) {
         const cols = rows[rowIndex];
         for (let colIndex = 0; colIndex < cols.length; colIndex++) {
@@ -467,11 +508,36 @@ class MahjongCanvasRenderer {
           if (tileIndex != null) {
             const currentTile = this.#engine.getTileAtIndex(tileIndex);
 
-            const getNeighbors = this.#engine.getNeigbors(
+            this.#shader.drawTileBase(
+              currentTile,
               layerIndex,
-              rowIndex,
-              colIndex
+              x,
+              y,
+              tileWidth,
+              tileHeight,
+              scale
             );
+          }
+        }
+      }
+
+      // Draw tile faces
+      for (let rowIndex = 0; rowIndex < rows.length; rowIndex++) {
+        const cols = rows[rowIndex];
+        for (let colIndex = 0; colIndex < cols.length; colIndex++) {
+          const top = offsetY + rowIndex * scaleY;
+          const left = offsetX + colIndex * scaleX;
+
+          const originX = left + scaleX / 2;
+          const originY = top + scaleY / 2;
+
+          const x = Math.floor(originX - tileWidth / 2) + 0.5;
+          const y = Math.floor(originY - tileHeight / 2) + 0.5;
+
+          const tileIndex = cols[colIndex];
+
+          if (tileIndex != null) {
+            const currentTile = this.#engine.getTileAtIndex(tileIndex);
 
             this.#shader.drawTile(
               currentTile,
@@ -606,11 +672,15 @@ class MahjongCanvasEventHandler {
 
     const closestTile = this.#engine.getClosest(rowIndex, colIndex);
 
-    console.log(closestTile);
-
     this.#engine.setSelectedCell({ rowIndex, colIndex });
     this.#engine.setSelectedTile(closestTile);
     this.#renderer.render();
+
+    const position = this.#engine.getPosition(closestTile);
+    if (position) {
+      const { layerIndex: li, rowIndex: ri, colIndex: ci } = position;
+      console.log(closestTile, this.#engine.getNeighbors(li, ri, ci));
+    }
   }
 
   destroy() {
@@ -669,7 +739,7 @@ const loadImageMap = async (...paths) => {
 
   mahjongShader.setImageMap(imageMap);
 
-  mahjongRenderer.setScale(4.0);
+  mahjongRenderer.setScale(6.0);
   mahjongRenderer.setShader(mahjongShader);
 
   //console.log([...new Set(mahjongEngine.tiles.map(({ id }) => id))]);
