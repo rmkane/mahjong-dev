@@ -130,6 +130,12 @@ const shuffleArrayInPlace = (array) => {
   }
 };
 
+const generateTileColors = (n) =>
+  Array.from(
+    { length: n },
+    (_, i) => `hsla(60, 20%, ${Math.floor(((i + 1) / n) * 100)}%, 1.0)`
+  );
+
 class MahjongEngine {
   #scale = 1.0;
   #tiles = [];
@@ -200,6 +206,10 @@ class MahjongEngine {
   get tiles() {
     return this.#tiles;
   }
+
+  get board() {
+    return this.#board;
+  }
 }
 
 const loadLayout = async (layout) => {
@@ -207,7 +217,7 @@ const loadLayout = async (layout) => {
   return response.json();
 };
 
-class MahjongRenderer {
+class MahjongCanvasRenderer {
   #engine = null;
   #context = null;
 
@@ -219,9 +229,74 @@ class MahjongRenderer {
     this.#context = context;
   }
 
+  metrics() {
+    const data = this.#engine.board.layers;
+
+    console.log(data);
+
+    return {
+      layerCount: data.length,
+      maxRows: Math.max(...data.map((layer) => layer.length)),
+      maxCols: Math.max(
+        ...data.flatMap((layer) => layer.map((row) => row.length))
+      ),
+    };
+  }
+
   render() {
     const engine = this.#engine;
+    const data = engine.board.layers;
     const ctx = this.#context;
+
+    const { layerCount, maxCols, maxRows } = this.metrics();
+
+    const scale = 4.0;
+    const offsetX = 2;
+    const offsetY = 2;
+
+    const colors = generateTileColors(layerCount); // generateHues(layerCount)
+
+    const scaleX = scale * 3;
+    const scaleY = scale * 4;
+
+    const tileWidth = scaleX * 2;
+    const tileHeight = scaleY * 2;
+
+    const layerHeight = maxRows * scaleY;
+    const layerWidth = maxCols * scaleX;
+
+    ctx.canvas.width = layerWidth + offsetX * 2;
+    ctx.canvas.height = layerHeight + offsetY * 2;
+
+    ctx.fillStyle = "#AAA";
+    ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+
+    ctx.strokeStyle = "#000";
+    ctx.lineWidth = 1;
+
+    for (let layerIndex = 0; layerIndex < data.length; layerIndex++) {
+      const rows = data[layerIndex];
+
+      ctx.fillStyle = colors[layerIndex];
+      for (let rowIndex = 0; rowIndex < rows.length; rowIndex++) {
+        const cols = rows[rowIndex];
+        for (let colIndex = 0; colIndex < cols.length; colIndex++) {
+          const top = offsetY + rowIndex * scaleY;
+          const left = offsetX + colIndex * scaleX;
+
+          const originX = left + scaleX / 2;
+          const originY = top + scaleY / 2;
+
+          const x = Math.floor(originX - tileWidth / 2) + 0.5;
+          const y = Math.floor(originY - tileHeight / 2) + 0.5;
+
+          if (cols[colIndex] != null) {
+            ctx.fillRect(x, y, tileWidth, tileHeight);
+            ctx.strokeRect(x, y, tileWidth, tileHeight);
+          }
+        }
+      }
+    }
   }
 }
 
@@ -229,7 +304,7 @@ class MahjongRenderer {
   const ctx = document.querySelector("#mahjong").getContext("2d");
   const layout = await loadLayout("shanghai");
   const mahjongEngine = new MahjongEngine();
-  const mahjongRenderer = new MahjongRenderer(mahjongEngine);
+  const mahjongRenderer = new MahjongCanvasRenderer(mahjongEngine);
   const mahojongEventHandler = null; // new MahjongEventHandler(mahjongEngine)
 
   mahjongEngine.loadLayout(layout);
