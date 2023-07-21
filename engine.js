@@ -415,19 +415,24 @@ class MahjongCanvasRenderer {
               tileHeight,
               scale
             );
-
-            // Highlight...
-            if (
-              selected &&
-              selected.rowIndex === rowIndex &&
-              selected.colIndex === colIndex
-            ) {
-              ctx.fillStyle = "hsla(0, 100%, 90%, 0.5)";
-              ctx.fillRect(x, y, tileWidth, tileHeight);
-            }
           }
         }
       }
+    }
+
+    // Highlight... if on top...
+    if (selected) {
+      const top = offsetY + selected.rowIndex * scaleY;
+      const left = offsetX + selected.colIndex * scaleX;
+
+      const originX = left + scaleX / 2;
+      const originY = top + scaleY / 2;
+
+      const x = Math.floor(originX - tileWidth / 2) + 0.5;
+      const y = Math.floor(originY - tileHeight / 2) + 0.5;
+
+      ctx.fillStyle = "hsla(0, 100%, 90%, 0.5)";
+      ctx.fillRect(x, y, tileWidth, tileHeight);
     }
   }
 }
@@ -464,6 +469,7 @@ class MahjongCanvasEventHandler {
     const { layerCount, maxCols, maxRows } = this.#engine.metrics();
     const rect = e.target.getBoundingClientRect();
     const point = localClickPoint(e);
+
     const offsetX = this.#renderer.getOffsetX();
     const offsetY = this.#renderer.getOffsetY();
     const tileWidth = this.#renderer.getTileWidth() / 2;
@@ -472,11 +478,14 @@ class MahjongCanvasEventHandler {
     const x = point.x + offsetX;
     const y = point.y + offsetY;
 
-    //const percentX = x / (rect.width - offsetX * 2);
-    //const percentY = y / (rect.height - offsetY * 2);
+    const percentX = x / (rect.width - offsetX * 2);
+    const percentY = y / (rect.height - offsetY * 2);
 
-    const rowIndex = Math.round(y / tileHeight);
-    const colIndex = Math.round(x / tileWidth);
+    const rowIndex = Math.floor(percentY * maxRows);
+    const colIndex = Math.floor(percentX * maxCols);
+
+    // Figure out the actual selected tile... top-most and closest to center
+    console.log({ rowIndex, colIndex });
 
     this.#engine.setSelected({ rowIndex, colIndex });
     this.#renderer.render();
