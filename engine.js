@@ -1,5 +1,5 @@
 const TILE_SCHEMA = {
-  suits: [
+  groups: [
     // Suits
     // Dots (Circles, Wheels)
     {
@@ -57,48 +57,48 @@ const TILE_SCHEMA = {
     },
   ],
   info: {
-    "dots-1": { matches: "self" },
-    "dots-2": { matches: "self" },
-    "dots-3": { matches: "self" },
-    "dots-4": { matches: "self" },
-    "dots-5": { matches: "self" },
-    "dots-6": { matches: "self" },
-    "dots-7": { matches: "self" },
-    "dots-8": { matches: "self" },
-    "dots-9": { matches: "self" },
-    "bamboo-1": { matches: "self" },
-    "bamboo-2": { matches: "self" },
-    "bamboo-3": { matches: "self" },
-    "bamboo-4": { matches: "self" },
-    "bamboo-5": { matches: "self" },
-    "bamboo-6": { matches: "self" },
-    "bamboo-7": { matches: "self" },
-    "bamboo-8": { matches: "self" },
-    "bamboo-9": { matches: "self" },
-    "characters-1": { matches: "self" },
-    "characters-2": { matches: "self" },
-    "characters-3": { matches: "self" },
-    "characters-4": { matches: "self" },
-    "characters-5": { matches: "self" },
-    "characters-6": { matches: "self" },
-    "characters-7": { matches: "self" },
-    "characters-8": { matches: "self" },
-    "characters-9": { matches: "self" },
-    "honors-east": { matches: "self" },
-    "honors-south": { matches: "self" },
-    "honors-west": { matches: "self" },
-    "honors-north": { matches: "self" },
-    "honors-red": { matches: "self" },
-    "honors-green": { matches: "self" },
-    "honors-white": { matches: "self" },
-    "bonus-spring": { matches: "bonus-plum" },
-    "bonus-summer": { matches: "bonus-orchid" },
-    "bonus-autumn": { matches: "bonus-chrysanthemum" },
-    "bonus-winter": { matches: "bonus-bamboo" },
-    "bonus-plum": { matches: "bonus-spring" },
-    "bonus-orchid": { matches: "bonus-summer" },
-    "bonus-chrysanthemum": { matches: "bonus-autumn" },
-    "bonus-bamboo": { matches: "bonus-winter" },
+    "dots-1": { key: "d1", matches: "self" },
+    "dots-2": { key: "d2", matches: "self" },
+    "dots-3": { key: "d3", matches: "self" },
+    "dots-4": { key: "d4", matches: "self" },
+    "dots-5": { key: "d5", matches: "self" },
+    "dots-6": { key: "d6", matches: "self" },
+    "dots-7": { key: "d7", matches: "self" },
+    "dots-8": { key: "d8", matches: "self" },
+    "dots-9": { key: "d9", matches: "self" },
+    "bamboo-1": { key: "b1", matches: "self" },
+    "bamboo-2": { key: "b2", matches: "self" },
+    "bamboo-3": { key: "b3", matches: "self" },
+    "bamboo-4": { key: "b4", matches: "self" },
+    "bamboo-5": { key: "b5", matches: "self" },
+    "bamboo-6": { key: "b6", matches: "self" },
+    "bamboo-7": { key: "b7", matches: "self" },
+    "bamboo-8": { key: "b8", matches: "self" },
+    "bamboo-9": { key: "b9", matches: "self" },
+    "characters-1": { key: "c1", matches: "self" },
+    "characters-2": { key: "c2", matches: "self" },
+    "characters-3": { key: "c3", matches: "self" },
+    "characters-4": { key: "c4", matches: "self" },
+    "characters-5": { key: "c5", matches: "self" },
+    "characters-6": { key: "c6", matches: "self" },
+    "characters-7": { key: "c7", matches: "self" },
+    "characters-8": { key: "c8", matches: "self" },
+    "characters-9": { key: "c9", matches: "self" },
+    "honors-east": { key: "a4", matches: "self" },
+    "honors-south": { key: "a7", matches: "self" },
+    "honors-west": { key: "a5", matches: "self" },
+    "honors-north": { key: "a6", matches: "self" },
+    "honors-red": { key: "a1", matches: "self" },
+    "honors-green": { key: "a3", matches: "self" },
+    "honors-white": { key: "a2", matches: "self" },
+    "bonus-spring": { key: "e1", matches: "bonus-plum" },
+    "bonus-summer": { key: "e2", matches: "bonus-orchid" },
+    "bonus-autumn": { key: "e3", matches: "bonus-chrysanthemum" },
+    "bonus-winter": { key: "e4", matches: "bonus-bamboo" },
+    "bonus-plum": { key: "f4", matches: "bonus-spring" },
+    "bonus-orchid": { key: "f4", matches: "bonus-summer" },
+    "bonus-chrysanthemum": { key: "f4", matches: "bonus-autumn" },
+    "bonus-bamboo": { key: "f4", matches: "bonus-winter" },
   },
 };
 
@@ -130,12 +130,6 @@ const shuffleArrayInPlace = (array) => {
   }
 };
 
-const generateTileColors = (n) =>
-  Array.from(
-    { length: n },
-    (_, i) => `hsla(60, 20%, ${Math.floor(((i + 1) / n) * 100)}%, 1.0)`
-  );
-
 class MahjongEngine {
   #scale = 1.0;
   #tiles = [];
@@ -148,16 +142,20 @@ class MahjongEngine {
 
   #loadTiles() {
     const tmp = [];
-    TILE_SCHEMA.suits.forEach(({ group, name, values, duplicates, suited }) => {
-      [...range(duplicates)].forEach(() => {
-        values.forEach((value) => {
-          tmp.push({
-            id: `${suited ? name : group}-${value}`,
-            present: true,
+    TILE_SCHEMA.groups.forEach(
+      ({ group, name, values, duplicates, suited }) => {
+        [...range(duplicates)].forEach(() => {
+          values.forEach((value) => {
+            const id = `${suited ? name : group}-${value}`;
+            tmp.push({
+              id,
+              image: TILE_SCHEMA.info[id].key,
+              present: true,
+            });
           });
         });
-      });
-    });
+      }
+    );
     return tmp;
   }
 
@@ -203,6 +201,17 @@ class MahjongEngine {
     return null;
   }
 
+  metrics() {
+    const data = this.#board.layers;
+    return {
+      layerCount: data.length,
+      maxRows: Math.max(...data.map((layer) => layer.length)),
+      maxCols: Math.max(
+        ...data.flatMap((layer) => layer.map((row) => row.length))
+      ),
+    };
+  }
+
   get tiles() {
     return this.#tiles;
   }
@@ -217,44 +226,90 @@ const loadLayout = async (layout) => {
   return response.json();
 };
 
-class MahjongCanvasRenderer {
+class MahjongCanvasShader {
   #engine = null;
   #context = null;
+  #imageMap = new Map();
 
-  constructor(engine) {
+  constructor(engine, context) {
     this.#engine = engine;
+    this.#context = context;
+  }
+
+  getEngine() {
+    return this.#engine;
+  }
+
+  setEngine(engine) {
+    this.#engine = engine;
+  }
+
+  getContext() {
+    return this.#context;
   }
 
   setContext(context) {
     this.#context = context;
   }
 
-  metrics() {
-    const data = this.#engine.board.layers;
+  getImageMap() {
+    return this.#imageMap;
+  }
 
-    console.log(data);
+  setImageMap(imageMap) {
+    this.#imageMap = imageMap;
+  }
 
-    return {
-      layerCount: data.length,
-      maxRows: Math.max(...data.map((layer) => layer.length)),
-      maxCols: Math.max(
-        ...data.flatMap((layer) => layer.map((row) => row.length))
-      ),
-    };
+  drawTile(data, layerIndex, x, y, width, height, scale) {
+    const ctx = this.getContext();
+
+    const offsetX = layerIndex * -scale;
+    const offsetY = layerIndex * -scale;
+
+    const { image } = data;
+    const img = this.getImageMap().get(image);
+
+    const left = x + offsetX;
+    const top = y + offsetY;
+
+    ctx.fillStyle = "#422";
+    ctx.fillRect(left, top, width + scale, height + scale);
+
+    ctx.drawImage(img, left, top, width, height);
+
+    ctx.strokeStyle = "#642";
+    ctx.lineWidth = 1;
+    ctx.strokeRect(x + offsetX, y + offsetY, width, height);
+  }
+}
+
+class MahjongCanvasRenderer {
+  #engine = null;
+  #shader = null;
+  #scale = 1.0;
+
+  constructor(engine) {
+    this.#engine = engine;
+  }
+
+  setShader(shader) {
+    this.#shader = shader;
+  }
+
+  setScale(scale) {
+    this.#scale = scale;
   }
 
   render() {
     const engine = this.#engine;
     const data = engine.board.layers;
-    const ctx = this.#context;
+    const ctx = this.#shader.getContext();
 
-    const { layerCount, maxCols, maxRows } = this.metrics();
+    const { layerCount, maxCols, maxRows } = engine.metrics();
 
-    const scale = 4.0;
+    const scale = this.#scale;
     const offsetX = 2;
     const offsetY = 2;
-
-    const colors = generateTileColors(layerCount); // generateHues(layerCount)
 
     const scaleX = scale * 3;
     const scaleY = scale * 4;
@@ -271,13 +326,9 @@ class MahjongCanvasRenderer {
     ctx.fillStyle = "#AAA";
     ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
 
-    ctx.strokeStyle = "#000";
-    ctx.lineWidth = 1;
-
     for (let layerIndex = 0; layerIndex < data.length; layerIndex++) {
       const rows = data[layerIndex];
 
-      ctx.fillStyle = colors[layerIndex];
       for (let rowIndex = 0; rowIndex < rows.length; rowIndex++) {
         const cols = rows[rowIndex];
         for (let colIndex = 0; colIndex < cols.length; colIndex++) {
@@ -290,9 +341,20 @@ class MahjongCanvasRenderer {
           const x = Math.floor(originX - tileWidth / 2) + 0.5;
           const y = Math.floor(originY - tileHeight / 2) + 0.5;
 
-          if (cols[colIndex] != null) {
-            ctx.fillRect(x, y, tileWidth, tileHeight);
-            ctx.strokeRect(x, y, tileWidth, tileHeight);
+          const tileIndex = cols[colIndex];
+
+          if (tileIndex != null) {
+            const data = this.#engine.getTileAtIndex(tileIndex);
+
+            this.#shader.drawTile(
+              data,
+              layerIndex,
+              x,
+              y,
+              tileWidth,
+              tileHeight,
+              scale
+            );
           }
         }
       }
@@ -300,17 +362,89 @@ class MahjongCanvasRenderer {
   }
 }
 
+const localClickPoint = (e) => {
+  const rect = e.target.getBoundingClientRect();
+  return {
+    x: e.clientX - rect.left,
+    y: e.clientY - rect.top,
+  };
+};
+
+const globalClickPoint = (e) => {
+  return {
+    x: e.clientX,
+    y: e.clientY,
+  };
+};
+
+class MahjongCanvasEventHandler {
+  #canvas = null;
+
+  constructor(canvas) {
+    this.#canvas = canvas;
+
+    this.#canvas.addEventListener("click", this.handleClick);
+  }
+
+  handleClick(e) {
+    const point = localClickPoint(e);
+    console.log(point);
+  }
+
+  destroy() {
+    this.#canvas.removeEventListener("click", this.handleClick);
+  }
+}
+
+const imageDict = { a: 7, b: 9, c: 9, d: 9, e: 4, f: 4 };
+
+const dictToKeys = (dict) =>
+  Object.entries(dict).flatMap(([group, count]) =>
+    [...range(1, count + 1)].map((i) => `${group}${i}`)
+  );
+
+const keysToPaths = (keys, tileset = "shiny") =>
+  keys.map((key) => ({
+    key,
+    path: `./mahjong_support/tiles_${tileset}/${key}.gif`,
+  }));
+
+const imagePaths = keysToPaths(dictToKeys(imageDict));
+
+const loadImage = async (path) =>
+  new Promise((resolve) => {
+    const image = new Image();
+    image.src = path;
+    image.onload = function () {
+      resolve(image);
+    };
+  });
+
+const loadImageMap = async (...paths) => {
+  const imageMap = new Map();
+  for (let { key, path } of paths) {
+    const image = await loadImage(path);
+    imageMap.set(key, image);
+  }
+  return imageMap;
+};
+
 (async () => {
   const ctx = document.querySelector("#mahjong").getContext("2d");
   const layout = await loadLayout("shanghai");
+  const imageMap = await loadImageMap(...imagePaths);
   const mahjongEngine = new MahjongEngine();
   const mahjongRenderer = new MahjongCanvasRenderer(mahjongEngine);
-  const mahojongEventHandler = null; // new MahjongEventHandler(mahjongEngine)
+  const mahjongShader = new MahjongCanvasShader(mahjongEngine, ctx);
+  const mahojongEventHandler = new MahjongCanvasEventHandler(ctx.canvas);
 
   mahjongEngine.loadLayout(layout);
   mahjongEngine.shuffle();
 
-  mahjongRenderer.setContext(ctx);
+  mahjongShader.setImageMap(imageMap);
+
+  mahjongRenderer.setScale(4.0);
+  mahjongRenderer.setShader(mahjongShader);
 
   console.log([...new Set(mahjongEngine.tiles.map(({ id }) => id))]);
 
