@@ -7,3 +7,4 @@ Source: <https://www.masswerk.at/mahjong/>
 - <https://github.com/shaohuan/react-mahjong>
 - <https://github.com/Camerash/mahjong-dataset>
 - <https://github.com/Meggoo/meggmory>
+- <https://solitaired.com/guides/how-to-play-mahjong-solitaire>

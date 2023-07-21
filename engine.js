@@ -134,6 +134,7 @@ class MahjongEngine {
   #scale = 1.0;
   #tiles = [];
   #board = {};
+  #selected = null;
 
   constructor(initialScale) {
     this.#scale = initialScale ?? 1.0;
@@ -212,6 +213,36 @@ class MahjongEngine {
     };
   }
 
+  getNeigbors(layerIndex, rowIndex, colIndex) {
+    const data = this.#board.layers;
+    const west = data[layerIndex][rowIndex][colIndex - 1];
+    const east = data[layerIndex][rowIndex][colIndex + 1];
+    const south = data[layerIndex][rowIndex + 1][colIndex];
+    const north = data[layerIndex][rowIndex - 1][colIndex];
+  }
+
+  isTop(layerIndex, rowIndex, colIndex) {
+    const data = this.#board.layers;
+    const topLayer = data[layerIndex + 1];
+    for (let offsetRow = -1; offsetRow >= 1; offsetRow++) {
+      for (let offsetCol = -1; offsetCol >= 1; offsetCol++) {
+        if (topLayer[rowIndex + offsetRow][colIndex + offsetCol]) {
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+
+  setSelected({ rowIndex, colIndex }) {
+    // const tile = getTileAtPosition(rowIndex, colIndex);
+    this.#selected = { rowIndex, colIndex };
+  }
+
+  getSelected() {
+    return this.#selected;
+  }
+
   get tiles() {
     return this.#tiles;
   }
@@ -287,6 +318,8 @@ class MahjongCanvasRenderer {
   #engine = null;
   #shader = null;
   #scale = 1.0;
+  #offsetX = 2;
+  #offsetY = 2;
 
   constructor(engine) {
     this.#engine = engine;
@@ -300,16 +333,37 @@ class MahjongCanvasRenderer {
     this.#scale = scale;
   }
 
+  getOffsetX() {
+    return this.#offsetX;
+  }
+
+  getOffsetY() {
+    return this.#offsetY;
+  }
+
+  // See render
+  getTileWidth() {
+    return this.#scale * 3 * 2;
+  }
+
+  // See render
+  getTileHeight() {
+    return this.#scale * 4 * 2;
+  }
+
   render() {
     const engine = this.#engine;
     const data = engine.board.layers;
     const ctx = this.#shader.getContext();
 
     const { layerCount, maxCols, maxRows } = engine.metrics();
+    const selected = engine.getSelected();
+
+    console.log(selected);
 
     const scale = this.#scale;
-    const offsetX = 2;
-    const offsetY = 2;
+    const offsetX = this.getOffsetX();
+    const offsetY = this.getOffsetY();
 
     const scaleX = scale * 3;
     const scaleY = scale * 4;
@@ -346,6 +400,12 @@ class MahjongCanvasRenderer {
           if (tileIndex != null) {
             const data = this.#engine.getTileAtIndex(tileIndex);
 
+            const getNeighbors = this.#engine.getNeigbors(
+              layerIndex,
+              rowIndex,
+              colIndex
+            );
+
             this.#shader.drawTile(
               data,
               layerIndex,
@@ -355,6 +415,16 @@ class MahjongCanvasRenderer {
               tileHeight,
               scale
             );
+
+            // Highlight...
+            if (
+              selected &&
+              selected.rowIndex === rowIndex &&
+              selected.colIndex === colIndex
+            ) {
+              ctx.fillStyle = "hsla(0, 100%, 90%, 0.5)";
+              ctx.fillRect(x, y, tileWidth, tileHeight);
+            }
           }
         }
       }
@@ -378,17 +448,38 @@ const globalClickPoint = (e) => {
 };
 
 class MahjongCanvasEventHandler {
+  #engine = null;
+  #renderer = null;
   #canvas = null;
 
-  constructor(canvas) {
+  constructor(engine, renderer, canvas) {
+    this.#engine = engine;
+    this.#renderer = renderer;
     this.#canvas = canvas;
 
-    this.#canvas.addEventListener("click", this.handleClick);
+    this.#canvas.addEventListener("click", this.handleClick.bind(this));
   }
 
   handleClick(e) {
+    const { layerCount, maxCols, maxRows } = this.#engine.metrics();
+    const rect = e.target.getBoundingClientRect();
     const point = localClickPoint(e);
-    console.log(point);
+    const offsetX = this.#renderer.getOffsetX();
+    const offsetY = this.#renderer.getOffsetY();
+    const tileWidth = this.#renderer.getTileWidth() / 2;
+    const tileHeight = this.#renderer.getTileHeight() / 2;
+
+    const x = point.x + offsetX;
+    const y = point.y + offsetY;
+
+    //const percentX = x / (rect.width - offsetX * 2);
+    //const percentY = y / (rect.height - offsetY * 2);
+
+    const rowIndex = Math.round(y / tileHeight);
+    const colIndex = Math.round(x / tileWidth);
+
+    this.#engine.setSelected({ rowIndex, colIndex });
+    this.#renderer.render();
   }
 
   destroy() {
@@ -436,7 +527,11 @@ const loadImageMap = async (...paths) => {
   const mahjongEngine = new MahjongEngine();
   const mahjongRenderer = new MahjongCanvasRenderer(mahjongEngine);
   const mahjongShader = new MahjongCanvasShader(mahjongEngine, ctx);
-  const mahojongEventHandler = new MahjongCanvasEventHandler(ctx.canvas);
+  const mahojongEventHandler = new MahjongCanvasEventHandler(
+    mahjongEngine,
+    mahjongRenderer,
+    ctx.canvas
+  );
 
   mahjongEngine.loadLayout(layout);
   mahjongEngine.shuffle();
