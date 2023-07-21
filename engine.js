@@ -515,8 +515,9 @@ class MahjongCanvasEventHandler {
 
     const offsetX = this.#renderer.getOffsetX();
     const offsetY = this.#renderer.getOffsetY();
-    const tileWidth = this.#renderer.getTileWidth() / 2;
-    const tileHeight = this.#renderer.getTileHeight() / 2;
+
+    const tileWidth = this.#renderer.getTileWidth();
+    const tileHeight = this.#renderer.getTileHeight();
 
     console.log({ offsetX, offsetY });
 
@@ -525,14 +526,14 @@ class MahjongCanvasEventHandler {
 
     this.#engine.addPoint({ x, y });
 
-    const top = y - offsetY;
-    const left = x - offsetX;
+    const top = y - offsetY - tileHeight / 4;
+    const left = x - offsetX - tileWidth / 4;
 
     const percentX = left / (rect.width - offsetX * 2);
     const percentY = top / (rect.height - offsetY * 2);
 
-    const rowIndex = Math.floor(percentY * maxRows);
-    const colIndex = Math.floor(percentX * maxCols);
+    const rowIndex = Math.round(percentY * maxRows);
+    const colIndex = Math.round(percentX * maxCols);
 
     // Figure out the actual selected tile... top-most and closest to center
     console.log({ rowIndex, colIndex });
