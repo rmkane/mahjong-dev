@@ -134,7 +134,8 @@ class MahjongEngine {
   #scale = 1.0;
   #tiles = [];
   #board = {};
-  #selected = null;
+  #selectedCell = null;
+  #selectedTile = null;
   #points = [];
 
   constructor(initialScale) {
@@ -214,6 +215,25 @@ class MahjongEngine {
     };
   }
 
+  getClosest(rowIndex, colIndex) {
+    const { maxRows, maxCols } = this.metrics();
+
+    if (rowIndex < 0 || rowIndex > maxRows - 1) return null;
+    if (colIndex < 0 || colIndex > maxCols - 1) return null;
+
+    const data = this.#board.layers;
+    for (let layerIndex = data.length - 1; layerIndex >= 0; layerIndex--) {
+      const index = data[layerIndex][rowIndex][colIndex];
+      if (index != null) {
+        const tile = this.getTileAtIndex(index);
+        if (tile && tile.present) {
+          return tile;
+        }
+      }
+    }
+    return null;
+  }
+
   getNeigbors(layerIndex, rowIndex, colIndex) {
     const data = this.#board.layers;
     const west = data[layerIndex][rowIndex][colIndex - 1];
@@ -235,13 +255,21 @@ class MahjongEngine {
     return true;
   }
 
-  setSelected({ rowIndex, colIndex }) {
-    // const tile = getTileAtPosition(rowIndex, colIndex);
-    this.#selected = { rowIndex, colIndex };
+  getSelectedCell() {
+    return this.#selectedCell;
   }
 
-  getSelected() {
-    return this.#selected;
+  setSelectedCell({ rowIndex, colIndex }) {
+    // const tile = getTileAtPosition(rowIndex, colIndex);
+    this.#selectedCell = { rowIndex, colIndex };
+  }
+
+  getSelectedTile() {
+    return this.#selectedTile;
+  }
+
+  setSelectedTile(tile) {
+    this.#selectedTile = tile;
   }
 
   getPoints() {
@@ -319,7 +347,23 @@ class MahjongCanvasShader {
 
     ctx.strokeStyle = "#642";
     ctx.lineWidth = 1;
-    ctx.strokeRect(x + offsetX, y + offsetY, width, height);
+    ctx.strokeRect(left, top, width, height);
+  }
+
+  drawHighlight(layerIndex, x, y, width, height, scale) {
+    const ctx = this.getContext();
+
+    const offsetX = layerIndex * -scale;
+    const offsetY = layerIndex * -scale;
+
+    const left = x + offsetX;
+    const top = y + offsetY;
+
+    ctx.fillStyle = "hsla(120, 100%, 50%, 0.25)";
+    ctx.fillRect(left, top, width, height);
+
+    ctx.strokeStyle = "hsla(120, 100%, 50%, 1.0)";
+    ctx.strokeRect(left, top, width, height);
   }
 }
 
@@ -366,12 +410,11 @@ class MahjongCanvasRenderer {
     const ctx = this.#shader.getContext();
 
     const { layerCount, maxCols, maxRows } = engine.metrics();
-    const selected = engine.getSelected();
+    const selected = engine.getSelectedCell();
+    const selectedTile = engine.getSelectedTile();
 
     const points = engine.getPoints();
     const pointRadius = 4;
-
-    console.log(selected);
 
     const scale = this.#scale;
     const offsetX = this.getOffsetX();
@@ -410,7 +453,7 @@ class MahjongCanvasRenderer {
           const tileIndex = cols[colIndex];
 
           if (tileIndex != null) {
-            const data = this.#engine.getTileAtIndex(tileIndex);
+            const currentTile = this.#engine.getTileAtIndex(tileIndex);
 
             const getNeighbors = this.#engine.getNeigbors(
               layerIndex,
@@ -419,7 +462,7 @@ class MahjongCanvasRenderer {
             );
 
             this.#shader.drawTile(
-              data,
+              currentTile,
               layerIndex,
               x,
               y,
@@ -427,31 +470,45 @@ class MahjongCanvasRenderer {
               tileHeight,
               scale
             );
+
+            if (currentTile === selectedTile) {
+              this.#shader.drawHighlight(
+                layerIndex,
+                x,
+                y,
+                tileWidth,
+                tileHeight,
+                scale
+              );
+            }
           }
         }
       }
     }
 
-    ctx.strokeStyle = "hsla(0, 0%, 0%, 0.5)";
-    const rows = data[0];
-    for (let rowIndex = 0; rowIndex < rows.length; rowIndex++) {
-      const cols = rows[rowIndex];
-      for (let colIndex = 0; colIndex < cols.length; colIndex++) {
-        const top = offsetY + rowIndex * scaleY;
-        const left = offsetX + colIndex * scaleX;
+    // Grid lines
+    if (false) {
+      ctx.strokeStyle = "hsla(0, 0%, 0%, 0.5)";
+      const rows = data[0];
+      for (let rowIndex = 0; rowIndex < rows.length; rowIndex++) {
+        const cols = rows[rowIndex];
+        for (let colIndex = 0; colIndex < cols.length; colIndex++) {
+          const top = offsetY + rowIndex * scaleY;
+          const left = offsetX + colIndex * scaleX;
 
-        const originX = left + scaleX / 2;
-        const originY = top + scaleY / 2;
+          const originX = left + scaleX / 2;
+          const originY = top + scaleY / 2;
 
-        const x = Math.floor(originX - tileWidth / 2) + 0.5;
-        const y = Math.floor(originY - tileHeight / 2) + 0.5;
+          const x = Math.floor(originX - tileWidth / 2) + 0.5;
+          const y = Math.floor(originY - tileHeight / 2) + 0.5;
 
-        ctx.strokeRect(x, y, tileWidth, tileHeight);
+          ctx.strokeRect(x, y, tileWidth, tileHeight);
+        }
       }
     }
 
     // Highlight... if on top...
-    if (selected) {
+    if (false && selected) {
       const top = offsetY + selected.rowIndex * scaleY;
       const left = offsetX + selected.colIndex * scaleX;
 
@@ -468,13 +525,15 @@ class MahjongCanvasRenderer {
       ctx.strokeRect(x, y, tileWidth, tileHeight);
     }
 
-    ctx.fillStyle = "#FF0";
-
-    points.forEach(({ x, y }) => {
-      ctx.beginPath();
-      ctx.arc(x, y, pointRadius, 0, Math.PI * 2);
-      ctx.stroke();
-    });
+    // Dots
+    if (false) {
+      ctx.strokeStyle = "#F00";
+      points.forEach(({ x, y }) => {
+        ctx.beginPath();
+        ctx.arc(x, y, pointRadius, 0, Math.PI * 2);
+        ctx.stroke();
+      });
+    }
   }
 }
 
@@ -519,8 +578,6 @@ class MahjongCanvasEventHandler {
     const tileWidth = this.#renderer.getTileWidth();
     const tileHeight = this.#renderer.getTileHeight();
 
-    console.log({ offsetX, offsetY });
-
     const x = point.x;
     const y = point.y;
 
@@ -535,10 +592,12 @@ class MahjongCanvasEventHandler {
     const rowIndex = Math.round(percentY * maxRows);
     const colIndex = Math.round(percentX * maxCols);
 
-    // Figure out the actual selected tile... top-most and closest to center
-    console.log({ rowIndex, colIndex });
+    const closestTile = this.#engine.getClosest(rowIndex, colIndex);
 
-    this.#engine.setSelected({ rowIndex, colIndex });
+    console.log(closestTile);
+
+    this.#engine.setSelectedCell({ rowIndex, colIndex });
+    this.#engine.setSelectedTile(closestTile);
     this.#renderer.render();
   }
 
@@ -601,10 +660,9 @@ const loadImageMap = async (...paths) => {
   mahjongRenderer.setScale(4.0);
   mahjongRenderer.setShader(mahjongShader);
 
-  console.log([...new Set(mahjongEngine.tiles.map(({ id }) => id))]);
-
-  console.log(mahjongEngine.getTileAtIndex(1));
-  console.log(mahjongEngine.getTileAtPosition(1, 5));
+  //console.log([...new Set(mahjongEngine.tiles.map(({ id }) => id))]);
+  //console.log(mahjongEngine.getTileAtIndex(1));
+  //console.log(mahjongEngine.getTileAtPosition(1, 5));
 
   mahjongRenderer.render();
 })();
