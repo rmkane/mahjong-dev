@@ -216,12 +216,23 @@ class MahjongEngine {
   }
 
   getClosest(rowIndex, colIndex) {
-    const { maxRows, maxCols } = this.metrics();
+    for (let rowOff = rowIndex - 1; rowOff <= rowIndex + 1; rowOff++) {
+      for (let colOff = colIndex - 1; colOff <= colIndex + 1; colOff++) {
+        const closest = this.getTop(rowOff, colOff);
+        if (closest) {
+          return closest;
+        }
+      }
+    }
+    return null;
+  }
 
+  getTop(rowIndex, colIndex) {
+    const { maxRows, maxCols } = this.metrics();
     if (rowIndex < 0 || rowIndex > maxRows - 1) return null;
     if (colIndex < 0 || colIndex > maxCols - 1) return null;
-
     const data = this.#board.layers;
+    // Loop over layers top-down
     for (let layerIndex = data.length - 1; layerIndex >= 0; layerIndex--) {
       const index = data[layerIndex][rowIndex][colIndex];
       if (index != null) {
@@ -234,25 +245,26 @@ class MahjongEngine {
     return null;
   }
 
-  getNeigbors(layerIndex, rowIndex, colIndex) {
-    const data = this.#board.layers;
-    const west = data[layerIndex][rowIndex][colIndex - 1];
-    const east = data[layerIndex][rowIndex][colIndex + 1];
-    const south = data[layerIndex][rowIndex + 1][colIndex];
-    const north = data[layerIndex][rowIndex - 1][colIndex];
+  getTile(layerIndex, rowIndex, colIndex) {
+    const { layerCount, maxRows, maxCols } = this.metrics();
+    if (layerIndex < 0 || layerIndex > layerCount - 1) return null;
+    if (rowIndex < 0 || rowIndex > maxRows - 1) return null;
+    if (colIndex < 0 || colIndex > maxCols - 1) return null;
+
+    const tileIndex = this.#board.layers[layerIndex][rowIndex][colIndex];
+
+    return this.getTileAtIndex(tileIndex);
   }
 
-  isTop(layerIndex, rowIndex, colIndex) {
-    const data = this.#board.layers;
-    const topLayer = data[layerIndex + 1];
-    for (let offsetRow = -1; offsetRow >= 1; offsetRow++) {
-      for (let offsetCol = -1; offsetCol >= 1; offsetCol++) {
-        if (topLayer[rowIndex + offsetRow][colIndex + offsetCol]) {
-          return false;
-        }
-      }
-    }
-    return true;
+  getNeigbors(layerIndex, rowIndex, colIndex) {
+    const west = this.getTile(layerIndex, rowIndex, colIndex - 2);
+    const east = this.getTile(layerIndex, rowIndex, colIndex + 2);
+    const south = this.getTile(layerIndex, rowIndex + 2, colIndex);
+    const north = this.getTile(layerIndex, rowIndex - 2, colIndex);
+
+    console.log({ west, east, south, north });
+
+    return { west, east, south, north };
   }
 
   getSelectedCell() {
